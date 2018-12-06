@@ -1,0 +1,23 @@
+#!/bin/bash
+
+PROFILE=$1
+COMMAND=$2
+
+if [ ! -n "$PROFILE" ]; then
+  echo "Usage: aws-assume <profile> [<command>]"
+  exit
+fi
+
+ACCOUNT=$(aws --profile $PROFILE sts get-caller-identity | jq '.UserId')
+if [ ! -n "$ACCOUNT" ]; then exit; fi
+CACHE=$(grep -r --files-with-matches $ACCOUNT ~/.aws/cli/cache)
+
+export AWS_ACCESS_KEY_ID=$(cat $CACHE | jq -r '.Credentials.AccessKeyId')
+export AWS_SECRET_ACCESS_KEY=$(cat $CACHE | jq -r '.Credentials.SecretAccessKey')
+export AWS_SESSION_TOKEN=$(cat $CACHE | jq -r '.Credentials.SessionToken')
+
+if [ -n "$COMMAND" ]; then
+  eval $COMMAND
+else
+  env | grep AWS
+fi
